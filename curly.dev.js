@@ -1,23 +1,21 @@
 // full dev bundle with errors written
 
 const curly = {
-  // the only truely global variable in Curly.js is this array,
-  // which will hold a reference of every element rendered to the page
-  elements: [],
-
   // quick reimplementation of React.createElement(e, p, c) for jsx use without React loaded...
   // does not handle functions from jsx well (if at all in some cases)
   // need to change the Babel pragma for jsx if you want to use this
   createElement(element, props, children) {
     //check to see if element is defined as a function
     if (typeof element === "function") {
+      // transform props into an object that contains child elements 
       props = {
         ...props,
         children: [children] || ""
       };
-      //return the function
+      //call the function passing in new props object
       return element(props);
     } else {
+      // build an object that is recognizeable to curly
       return (obj = {
         [element]: props || {},
         has: [children]
@@ -29,8 +27,11 @@ const curly = {
 
   // build/render/update helpers
   createDOMSelector(obj) {
+    // get the first key from the object
     const key = Object.keys(obj)[0];
+    // get the attributes of said object
     const attrs = obj[key];
+    // choose most specific selector
     if (attrs.id) {
       select = `${key}#${attrs.id}`;
     } else if (attrs.classList) {
@@ -38,6 +39,7 @@ const curly = {
     }
   },
   selectElement(ele) {
+    // prefer an already selected element to creating a new selector
     return (
       ele.DOMelement || document.querySelector(curly.createDOMSelector(ele))
     );
@@ -54,16 +56,26 @@ const curly = {
   clearChildIntervals(ele) {
     // loop through has object
     ele.has.forEach(e => {
+      // reset intervals
       curly.resetInterval(e);
     });
   },
   // remove listeners from element
   removeListeners(ele) {
     for (event in ele.events) {
-      ele.DOMelement.removeEventListener(event, ele.events[event]);
+      try{
+        ele.DOMelement.removeEventListener(event, ele.events[event]);
+      } catch {
+        console.group("error removing evnet listener")
+        console.error("Could not remove event listener: " + event);
+        console.error("listener was either not a function or was an anonymous function.")
+        console.groupEnd("error removing evnet listener")
+      }
+
     }
   },
   removeElement(ele) {
+    // destroys all instances of the element.
     curly.resetInterval(ele);
     curly.removeListeners(ele);
     ele.DOMelement.remove();
@@ -71,6 +83,7 @@ const curly = {
   },
 
   // takes in an array of objects and sorts by key
+  // unused in code at the moment, may be helpful for retreving stylesheet in a readable manner.
   sortObjs(arr) {
     return arr.sort((a, b) => {
       return Object.keys(a)[0] > Object.keys(b)[0] ? 1 : -1;
@@ -94,12 +107,13 @@ const curly = {
     for (var key in element) {
       // creates selector with preference set as class>id>tag
       if (element[key].classList) {
-        return (selector = `${key}.${element[key].classList
-          .split(" ")
-          .join(".")}`);
+        //preferrs class over id or generic tag.
+        //uses first class so that utility classes can be applied through ?: statements in the object.
+        return (selector = `${key}.${element[key].classList.split(" ")[0]}`);
       } else if (element[key].id) {
         return (selector = `${key}#${element[key].id}`);
       } else {
+        //least preferred, should use global style object instead.
         console.group('Selector Creation Warning')
         console.warn(`Curly created a generic tag selector: ${key} \n This could cause unwanted effects in styling. \n Please add a more specific selector like class or id to your component. \n Or place style in the global styles object.`)
         console.groupEnd('Selector Creation Warning')
@@ -110,17 +124,16 @@ const curly = {
   // takes a css style object and creates a string
   // with selector and rules to append to the stylesheet
   createRuleString(obj) {
+    //might be unnecessary, doublechecks that object being passed in is the styles object.
     if (obj.CSSselector) return obj.CSSselector;
     // create base string in correct scope
     ruleStr = ``;
 
     // loop through and append each rule as string to base rule string
     for (let rule in obj) {
+      // check for reserved words
       if (rule !== "psudo" || rule !== 'updated') {
-        ruleStr += ` ${rule.replace(/_/g, "-")}: ${String(obj[rule]).replace(
-          /_/g,
-          "-"
-        )};`;
+        ruleStr += ` ${rule.replace(/_/g, "-")}: ${String(obj[rule]).replace(/_/g, "-")};`;
       }
     }
     return ruleStr;
@@ -138,6 +151,7 @@ const curly = {
   },
   removeFromStyleSheet(selector, styleObj, styleSheet) {
     for (var index in styleSheet.rules) {
+      // make sure that the update flag is present, search for match in selector text
       if ( styleObj.updated && styleSheet.rules[index].selectorText === selector ) {
         console.warn(`Deleting rule from stylesheet: \n ${styleSheet.rules[index].cssText};\n This rule has been updated.`)
         styleSheet.deleteRule(index);
@@ -145,9 +159,11 @@ const curly = {
     }
   },
   updateStyleSheet(selector, styleObj, styleSheet) {
+    // check update flag, this is checked multiple times...
     if(styleObj.updated){
       curly.removeFromStyleSheet(selector, styleObj, styleSheet);
       curly.addToStyleSheet(selector, styleObj, styleSheet);
+      // remove flag
       styleObj.updated = false;
     }
   },
@@ -158,10 +174,13 @@ const curly = {
     // called on 'has' change
     // can also be called at will with other functions
     update() {
-      this.DOMelement.innerHTML = "";
+      // clear the element
+      curly.selectElement(this).innerHTML = "";
 
+      // use because 'this' referrs to the window in the foreach loop
       const parent = curly.selectElement(this);
 
+      // render all children
       this.has.forEach(child => {
         curly.render(child, parent);
       });
@@ -182,13 +201,17 @@ const curly = {
 
     // insert an item at a specific point in the has array
     addHas(ele, i) {
+      // checks to makesure element is not in has
       if (!this.has.includes(ele)) {
+        // splices into array
         this.has.splice(i, 0, ele);
         if (i < this.has.length - 1) {
+          // styles and appends before a sibling
           curly.style(ele);
           const sibling = this.has[i + 1].DOMelement;
           sibling.parentNode.insertBefore(curly.build(ele), sibling);
         } else {
+          // if it will be last, do standard rendering.
           curly.render(ele, this.DOMelement);
         }
       }
@@ -196,8 +219,11 @@ const curly = {
 
     // remove a specific item
     removeHas(ele) {
+      // checks to makesure element is in has
       if (this.has.includes(ele)) {
+        // pulls from has
         this.has.splice(this.has.indexOf(ele), 1);
+        // removes from existance
         curly.removeElement(ele);
       }
     },
@@ -205,17 +231,21 @@ const curly = {
     // update styles after changing
     //  pass in parameters as {property: value},
     setStyle(stylesObj, psudo = false) {
+      // create new style object if there isnt one
       if (!this.style) {
         this.style = {};
       }
+      // check for psudo selector declairation
       if(!psudo){
+        // add styles to style object, raise update flag
         this.style = Object.assign(this.style, stylesObj)
         this.style['updated'] = true;
       } else {
+        // add styles to psudostyle object, raise update flag
         this.style.psudo[psudo] = Object.assign(this.style.psudo[psudo], stylesObj)
         this.style.psudo[psudo]['updated'] = true;
       } 
-      
+      // restyle element
       curly.style(this);
     }
   },
@@ -224,12 +254,14 @@ const curly = {
     let newDOMelement;
     // create element
     if (typeof l === "string") {
+      // no other rendering needed
       return (newDOMelement = document.createTextNode(l));
     } else if (typeof l === "object") {
+      // add generic componant features
       Object.assign(l, curly.Component);
 
       for (var tag in l) {
-        //create element'
+        //create element
         try {
           newDOMelement = document.createElement(tag);
         } catch {
@@ -239,29 +271,26 @@ const curly = {
           console.groupEnd('Element creation error')
         }
 
-
+        // easyist way to select the element later on
         l.DOMelement = newDOMelement;
 
         // loop through attribute object
         for (var a in l[tag]) {
+          // set attributes on new element
           newDOMelement[a] = l[tag][a];
         }
 
         break;
       }
 
-      curly.elements = curly.elements.filter(ele => {
-        return ele.DOMelement !== newDOMelement;
-      });
-
-      curly.elements.push(l);
-
       //add child elements
       if (l.has) {
         l.has.forEach(i => {
           if (typeof i === "string") {
+            // if child is string, add it in
             newDOMelement.appendChild(document.createTextNode(i));
           } else if (typeof i === "object") {
+            // this is the BIG recurrsion, not sure if/how i can remove... or make async
             curly.render(i, newDOMelement);
           }
         });
@@ -270,8 +299,10 @@ const curly = {
       // add events
       for (let key in l.events) {
         try {
+          // adds event listeners
           newDOMelement.addEventListener(key, l.events[key]);
         } catch (error) {
+          // super helpful error IMO
           console.group("Error in Events object");
           console.error(
             "One or more of the keys in the events object is not a function at:"
@@ -285,6 +316,7 @@ const curly = {
       if (!l.int) {
         for (let key in l.timers) {
           try {
+            // sets timers
             l.timers[key]();
           } catch (error) {
             console.group("Error in Timers object");
@@ -302,6 +334,7 @@ const curly = {
   },
   //  styles and places element
   render(ele, locale, styles = {}) {
+    // main styling call; 
     curly.style(ele, styles);
     // locates parent and places built element inside
     locale.appendChild(curly.build(ele));
@@ -358,6 +391,7 @@ const curly = {
         }
       }
     } else {
+      // same as above but removes then adds updated string
       curly.updateStyleSheet(element.CSSselector, element.style, styleSheet);
       if (element.style.psudo) {
         for (var psudo in element.style.psudo) {
@@ -373,28 +407,44 @@ const curly = {
 
   //*** routing object
   // router for internal navigation
+  // allows for SPA functionality
   router: {
+    // easy way to set routing functions
     get(path, callback) {
       this.paths[`${path.replace(/[#/]/, "")}`] = callback;
     },
+    // can also just manipulate this by building a separate object and assigning it to router.paths.
+    // routes are visually discriptive, "what is on the page", functions.
     paths: {},
+    // main call to use router.
     run() {
+      // currently relies on hashlinks and "#home" as the root route.
+      // ways to improve this?
       window.location.hash =
         window.location.pathname !== `/`
           ? window.location.pathname.replace(`/`, "#")
           : "#home";
 
+      // listen for hash change
       window.onhashchange = function() {
+        // pull hash, clean it
         const h = window.location.hash.replace(/[#/]/, "");
+        // scroll to top of page
         window.scrollTo(0, 0);
+        // check for route
         if (curly.router.paths[h]) {
+          // if it exists manipulate history and run function
           window.history.replaceState({}, h, `/${h}`);
           return curly.router.paths[h]();
         }
+        // if path does not exist, gets treated as regular hashlink
       };
 
       window.onpopstate = function(e) {
+        // ONLY runs if no hash present.
         if (!window.location.hash) {
+          // everythign is the same as above
+          // eccept, if path does not exist, routes to home.
           const p = window.location.pathname.replace(/[#/]/, "");
           window.scrollTo(0, 0);
           return curly.router.paths[p]
@@ -405,6 +455,7 @@ const curly = {
     }
   },
 
+  //*********** still in development, use at your own risk ***********//
   //*** JSON functions for prep and parse
   // JSON prep functions for development,
   // build your app with js objects then transpile to json for shiping.

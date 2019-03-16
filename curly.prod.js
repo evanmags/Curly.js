@@ -1,7 +1,6 @@
 // full prod bundle
 
 const curly = {
-  elements: [],
   createElement(element, props, children) {
     if (typeof element === "function") {
       props = {
@@ -174,10 +173,6 @@ const curly = {
         }
         break;
       }
-      curly.elements = curly.elements.filter(ele => {
-        return ele.DOMelement !== newDOMelement;
-      });
-      curly.elements.push(l);
       if (l.has) {
         l.has.forEach(i => {
           if (typeof i === "string") {
