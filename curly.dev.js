@@ -414,24 +414,25 @@ const curly = {
     // routes are visually discriptive, "what is on the page", functions.
     paths: {},
     // main call to use router.
-    run() {
+    run(rootPath, homeRoute)  {
       // currently relies on hashlinks and "#home" as the root route.
       // ways to improve this?
+      rootPath = rootPath || '';
       window.location.hash =
-        window.location.pathname !== `/`
-          ? window.location.pathname.replace(`/`, "#")
-          : "#home";
+        window.location.pathname !== rootPath
+          ? homeRoute
+          : window.location.pathname.replace(`${rootPath}` || "/", '');
 
       // listen for hash change
       window.onhashchange = function() {
         // pull hash, clean it
-        const h = window.location.hash.replace(/[#/]/, "");
+        const h = window.location.hash.replace(rootPath, '').replace(/[/#]/g, "");
         // scroll to top of page
         window.scrollTo(0, 0);
         // check for route
         if (curly.router.paths[h]) {
           // if it exists manipulate history and run function
-          window.history.replaceState({}, h, `/${h}`);
+          window.history.replaceState({}, h, `${rootPath}/${h}`);
           return curly.router.paths[h]();
         }
         // if path does not exist, gets treated as regular hashlink
@@ -442,7 +443,7 @@ const curly = {
         if (!window.location.hash) {
           // everythign is the same as above
           // eccept, if path does not exist, routes to home.
-          const p = window.location.pathname.replace(/[#/]/, "");
+          const p = window.location.pathname.replace(`${rootPath}/`, "");
           window.scrollTo(0, 0);
           return curly.router.paths[p]
             ? curly.router.paths[p]()

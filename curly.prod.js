@@ -9,19 +9,19 @@ const curly = {
       };
       return element(props);
     } else {
-      return (obj = {
+      return {
         [element]: props || {},
         has: [children]
-      });
+      };
     }
   },
   createDOMSelector(obj) {
     const key = Object.keys(obj)[0];
     const attrs = obj[key];
     if (attrs.id) {
-      select = `${key}#${attrs.id}`;
+      return `${key}#${attrs.id}`;
     } else if (attrs.classList) {
-      select = `${key}.${attrs.classList.split(" ").join(".")}`;
+      return `${key}.${attrs.classList.split(" ").join(".")}`;
     }
   },
   selectElement(ele) {
@@ -41,7 +41,7 @@ const curly = {
     });
   },
   removeListeners(ele) {
-    for (event in ele.events) {
+    for (let event in ele.events) {
       ele.DOMelement.removeEventListener(event, ele.events[event]);
     }
   },
@@ -65,13 +65,13 @@ const curly = {
   createCSSSelector(element) {
     for (var key in element) {
       if (element[key].classList) {
-        return (selector = `${key}.${element[key].classList
+        return `${key}.${element[key].classList
           .split(" ")
-          .join(".")}`);
+          .join(".")}`;
       } else if (element[key].id) {
-        return (selector = `${key}#${element[key].id}`);
+        return  `${key}#${element[key].id}`;
       } else {
-        return (selector = `${key}`);
+        return  `${key}`;
       }
     }
   },
@@ -160,13 +160,11 @@ const curly = {
   build(l) {
     let newDOMelement;
     if (typeof l === "string") {
-      return (newDOMelement = document.createTextNode(l));
+      return newDOMelement = document.createTextNode(l);
     } else if (typeof l === "object") {
       Object.assign(l, curly.Component);
       for (var tag in l) {
-        try {
-          newDOMelement = document.createElement(tag);
-        } catch {}
+        newDOMelement = document.createElement(tag);
         l.DOMelement = newDOMelement;
         for (var a in l[tag]) {
           newDOMelement[a] = l[tag][a];
@@ -183,15 +181,11 @@ const curly = {
         });
       }
       for (let key in l.events) {
-        try {
-          newDOMelement.addEventListener(key, l.events[key]);
-        } catch {}
+        newDOMelement.addEventListener(key, l.events[key]);
       }
       if (!l.int) {
         for (let key in l.timers) {
-          try {
-            l.timers[key]();
-          } catch {}
+          l.timers[key]();
         }
       }
     }
@@ -208,7 +202,7 @@ const curly = {
     let styleSheet, keys = [];
     try {
       styleSheet = document.querySelector("#CurlyJS_styles").sheet;
-    } catch {
+    } catch (error) {
       styleSheet = curly.createNewStyleSheet()
       for (var selector in styleObj) {
         curly.addToStyleSheet(selector, styleObj[selector], styleSheet);
@@ -223,7 +217,7 @@ const curly = {
     if (!keys.includes(element.CSSselector)) {
       curly.addToStyleSheet(element.CSSselector, element.style, styleSheet);
       if (element.style.psudo) {
-        for (var psudo in element.style.psudo) {
+        for (let psudo in element.style.psudo) {
           curly.addToStyleSheet(
             element.CSSselector + psudo,
             element.style.psudo[psudo],
@@ -234,7 +228,7 @@ const curly = {
     } else {
       curly.updateStyleSheet(element.CSSselector, element.style, styleSheet);
       if (element.style.psudo) {
-        for (var psudo in element.style.psudo) {
+        for (let psudo in element.style.psudo) {
           curly.updateStyleSheet(
             element.CSSselector + psudo,
             element.style.psudo[psudo],
@@ -249,21 +243,28 @@ const curly = {
       this.paths[`${path.replace(/[#/]/, "")}`] = callback;
     },
     paths: {},
-    run() {
-      window.location.hash = window.location.pathname !== `/` ? window.location.pathname.replace(`/`, '') : "#home";
+    run(rootPath, homeRoute)  {
+      rootPath = rootPath || '';
+      window.location.hash =
+        window.location.pathname !== rootPath
+          ? homeRoute
+          : window.location.pathname.replace(`${rootPath}` || "/", '');
       window.onhashchange = function() {
-        const h = window.location.hash.replace(/[#/]/, "");
+        const h = window.location.hash.replace(rootPath, '').replace(/[/#]/g, "");
         window.scrollTo(0, 0);
         if (curly.router.paths[h]) {
-          window.history.replaceState({}, h, `/${h}`);
+          window.history.replaceState({}, h, `${rootPath}/${h}`);
           return curly.router.paths[h]();
         }
       };
-      window.onpopstate = function(e) {
+
+      window.onpopstate = function() {
         if (!window.location.hash) {
-          const p = window.location.pathname.replace(/[#/]/, "");
+          const p = window.location.pathname.replace(`${rootPath}/`, "");
           window.scrollTo(0, 0);
-          return curly.router.paths[p] ? curly.router.paths[p]() : curly.router.paths.home();
+          return curly.router.paths[p]
+            ? curly.router.paths[p]()
+            : curly.router.paths.home();
         }
       };
     }
