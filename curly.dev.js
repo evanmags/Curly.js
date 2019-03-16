@@ -16,10 +16,7 @@ const curly = {
       return element(props);
     } else {
       // build an object that is recognizeable to curly
-      return (obj = {
-        [element]: props || {},
-        has: [children]
-      });
+      return { [element]: props || {}, has: [children] };
     }
   },
 
@@ -33,9 +30,9 @@ const curly = {
     const attrs = obj[key];
     // choose most specific selector
     if (attrs.id) {
-      select = `${key}#${attrs.id}`;
+      return `${key}#${attrs.id}`;
     } else if (attrs.classList) {
-      select = `${key}.${attrs.classList.split(" ").join(".")}`;
+      return `${key}.${attrs.classList.split(" ").join(".")}`;
     }
   },
   selectElement(ele) {
@@ -62,10 +59,10 @@ const curly = {
   },
   // remove listeners from element
   removeListeners(ele) {
-    for (event in ele.events) {
+    for (let event in ele.events) {
       try{
         ele.DOMelement.removeEventListener(event, ele.events[event]);
-      } catch {
+      } catch (error) {
         console.group("error removing evnet listener")
         console.error("Could not remove event listener: " + event);
         console.error("listener was either not a function or was an anonymous function.")
@@ -109,15 +106,15 @@ const curly = {
       if (element[key].classList) {
         //preferrs class over id or generic tag.
         //uses first class so that utility classes can be applied through ?: statements in the object.
-        return (selector = `${key}.${element[key].classList.split(" ")[0]}`);
+        return `${key}.${element[key].classList.split(" ")[0]}`;
       } else if (element[key].id) {
-        return (selector = `${key}#${element[key].id}`);
+        return `${key}#${element[key].id}`;
       } else {
         //least preferred, should use global style object instead.
         console.group('Selector Creation Warning')
         console.warn(`Curly created a generic tag selector: ${key} \n This could cause unwanted effects in styling. \n Please add a more specific selector like class or id to your component. \n Or place style in the global styles object.`)
         console.groupEnd('Selector Creation Warning')
-        return (selector = `${key}`);
+        return `${key}`;
       }
     }
   },
@@ -127,7 +124,7 @@ const curly = {
     //might be unnecessary, doublechecks that object being passed in is the styles object.
     if (obj.CSSselector) return obj.CSSselector;
     // create base string in correct scope
-    ruleStr = ``;
+    let ruleStr = ``;
 
     // loop through and append each rule as string to base rule string
     for (let rule in obj) {
@@ -255,7 +252,7 @@ const curly = {
     // create element
     if (typeof l === "string") {
       // no other rendering needed
-      return (newDOMelement = document.createTextNode(l));
+      return document.createTextNode(l);
     } else if (typeof l === "object") {
       // add generic componant features
       Object.assign(l, curly.Component);
@@ -264,7 +261,7 @@ const curly = {
         //create element
         try {
           newDOMelement = document.createElement(tag);
-        } catch {
+        } catch (error) {
           console.group('Element creation error')
           console.error(`${tag} is not a valid html tag at:`)
           console.error(l)
@@ -356,7 +353,7 @@ const curly = {
     //check if there is already a stylesheet
     try {
       styleSheet = document.querySelector("#CurlyJS_styles").sheet;
-    } catch {
+    } catch (error) {
       // create and access style sheet
       styleSheet = curly.createNewStyleSheet()
 
@@ -382,7 +379,7 @@ const curly = {
 
       if (element.style.psudo) {
         // loop through psudo elements if they are present
-        for (var psudo in element.style.psudo) {
+        for (let psudo in element.style.psudo) {
           curly.addToStyleSheet(
             element.CSSselector + psudo,
             element.style.psudo[psudo],
@@ -394,7 +391,7 @@ const curly = {
       // same as above but removes then adds updated string
       curly.updateStyleSheet(element.CSSselector, element.style, styleSheet);
       if (element.style.psudo) {
-        for (var psudo in element.style.psudo) {
+        for (let psudo in element.style.psudo) {
           curly.updateStyleSheet(
             element.CSSselector + psudo,
             element.style.psudo[psudo],
@@ -440,7 +437,7 @@ const curly = {
         // if path does not exist, gets treated as regular hashlink
       };
 
-      window.onpopstate = function(e) {
+      window.onpopstate = function() {
         // ONLY runs if no hash present.
         if (!window.location.hash) {
           // everythign is the same as above
