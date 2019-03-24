@@ -420,8 +420,12 @@ const curly = {
       rootPath = rootPath || '';
       window.location.hash =
         window.location.pathname !== rootPath
-          ? homeRoute
-          : window.location.pathname.replace(`${rootPath}` || "/", '');
+        ? window.location.pathname.includes(rootPath) 
+          ? window.location.pathname.replace(`${rootPath}/`, '') === '' 
+            ? homeRoute
+            : window.location.pathname.replace(`${rootPath}/`, '')
+          : homeRoute
+        : homeRoute;
 
       // listen for hash change
       window.onhashchange = function() {
